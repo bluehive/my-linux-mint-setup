@@ -1,0 +1,26 @@
+# Windows 11 用: Linux Mint（安定版 MATE / Xfce）インストール USB 作成
+# 使い方: このフォルダで  mise run usb-all   （個別: mise run iso-download など）
+# 片方だけ: $env:MINT_EDITION = "mate"（または "xfce"）を先に設定
+[settings]
+windows_default_inline_shell_args = "powershell -NoProfile -ExecutionPolicy Bypass -Command"
+
+[tools]
+gsudo = "latest"   # 管理者権限での実行用
+
+[tasks.iso-download]
+description = "ISO と sha256sum.txt をダウンロード"
+run = "powershell -NoProfile -ExecutionPolicy Bypass -File make-mint-usb.ps1 -Step download -Edition $(if ($env:MINT_EDITION) { $env:MINT_EDITION } else { 'both' })"
+
+[tasks.iso-verify]
+description = "ISO の SHA256 を確認"
+depends = ["iso-download"]
+run = "powershell -NoProfile -ExecutionPolicy Bypass -File make-mint-usb.ps1 -Step verify -Edition $(if ($env:MINT_EDITION) { $env:MINT_EDITION } else { 'both' })"
+
+[tasks.usb-write]
+description = "Ventoy を USB に入れ、ISO をコピー（管理者で実行、USB は消去）"
+run = "gsudo powershell -NoProfile -ExecutionPolicy Bypass -File make-mint-usb.ps1 -Step usb -Edition $(if ($env:MINT_EDITION) { $env:MINT_EDITION } else { 'both' })"
+
+[tasks.usb-all]
+description = "ダウンロード → 確認 → USB 作成"
+depends = ["iso-verify"]
+run = "gsudo powershell -NoProfile -ExecutionPolicy Bypass -File make-mint-usb.ps1 -Step usb -Edition $(if ($env:MINT_EDITION) { $env:MINT_EDITION } else { 'both' })"

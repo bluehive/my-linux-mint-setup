@@ -30,6 +30,28 @@ bash setup-xfce.sh
 
 日本語環境（ja_JP.UTF-8 ロケール、Noto CJK と IPA フォント、IBus と Mozc）、ブラウザ2つ（Firefox と Google Chrome）、LibreOffice（日本語化）を入れます。終わったら一度ログアウトしてください。
 
+## Windows 11 でインストール USB を作る（windows/）
+
+Linux Mint 安定版（22.3）の MATE 版と Xfce 版の ISO をダウンロードし、SHA256 を確認してから、[Ventoy](https://www.ventoy.net/) で1本の USB メモリに両方入れます。起動時のメニューでどちらかを選べます。
+
+準備（初回のみ、PowerShell で）:
+
+```powershell
+winget install jdx.mise
+```
+
+実行（`windows` フォルダで）:
+
+```powershell
+mise install          # gsudo（管理者実行用）を入れる
+mise run usb-all      # ダウンロード → 確認 → USB 作成
+```
+
+- 片方だけ入れるときは、先に `$env:MINT_EDITION = "mate"`（または `"xfce"`）を設定します。
+- 個別のタスクもあります: `mise run iso-download`、`mise run iso-verify`、`mise run usb-write`。
+- USB の番号を選び、`ERASE` と入力したときだけ書き込みます。**その USB の中身はすべて消えます。**
+- USB メモリは 8GB 以上（両方入れるなら 16GB 以上）を使ってください。
+
 ## 注意
 
 - `config/` フォルダ（`packages.list`、`mise.toml`、`repos.txt`）は、このリポジトリに含めていません。必要なら自分で用意してください。無ければ、その手順は飛ばされます。
