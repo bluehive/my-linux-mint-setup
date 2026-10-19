@@ -60,6 +60,20 @@ mise install          # gsudo（管理者実行用）を入れる
 mise run usb-all      # ダウンロード → 確認 → USB 作成
 ```
 
+### curl でワンライナー実行（クローン不要）
+
+mise を入れた後、PowerShell に次の1行を貼り付けます（`curl.exe` は Windows 11 に最初から入っています）。`~\mint-usb` にファイルを落として、そこで実行します。
+
+```powershell
+mkdir ~\mint-usb -Force | Out-Null; cd ~\mint-usb; curl.exe -fLO https://raw.githubusercontent.com/bluehive/my-linux-mint-setup/main/windows/make-mint-usb.ps1; curl.exe -fLO https://raw.githubusercontent.com/bluehive/my-linux-mint-setup/main/windows/mise.toml; mise trust; mise install; mise run usb-all
+```
+
+mise を使わないときは、**管理者の PowerShell** で次の1行でも動きます。
+
+```powershell
+mkdir ~\mint-usb -Force | Out-Null; cd ~\mint-usb; curl.exe -fLO https://raw.githubusercontent.com/bluehive/my-linux-mint-setup/main/windows/make-mint-usb.ps1; powershell -NoProfile -ExecutionPolicy Bypass -File .\make-mint-usb.ps1 -Step all
+```
+
 - 片方だけ入れるときは、先に `$env:MINT_EDITION = "mate"`（または `"xfce"`）を設定します。
 - 個別のタスクもあります: `mise run iso-download`、`mise run iso-verify`、`mise run usb-write`。
 - USB の番号を選び、`ERASE` と入力したときだけ書き込みます。**その USB の中身はすべて消えます。**
