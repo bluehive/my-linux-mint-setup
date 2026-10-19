@@ -28,6 +28,19 @@ Linux Mint Xfce 版を入れた直後に使う、軽めのセットアップで�
 bash setup-xfce.sh
 ```
 
+### wget で取ってきて実行する
+
+クローンしなくても、Mint の端末で次を順に実行すれば動きます（Mint には wget が最初から入っています）。
+
+```sh
+cd ~
+wget -O setup-xfce.sh https://raw.githubusercontent.com/bluehive/my-linux-mint-setup/main/setup-xfce.sh
+less setup-xfce.sh        # 中身を確認（q で閉じる）
+bash setup-xfce.sh
+```
+
+途中で sudo のパスワードを聞かれます。終わったら一度ログアウトしてください。
+
 日本語環境（ja_JP.UTF-8 ロケール、Noto CJK と IPA フォント、IBus と Mozc）、ブラウザ2つ（Firefox と Google Chrome）、LibreOffice（日本語化）を入れます。終わったら一度ログアウトしてください。
 
 ## Windows 11 でインストール USB を作る（windows/）
