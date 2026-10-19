@@ -25,20 +25,29 @@ function IsoNames {
   $eds | ForEach-Object { "linuxmint-$Version-$_-64bit.iso" }
 }
 
+# Windows PowerShell 5.1 does not throw on native-command failures.
+function Invoke-Curl {
+  & curl.exe @args
+  if ($LASTEXITCODE -ne 0) { throw "curl failed (exit $LASTEXITCODE)" }
+}
+
 function Step-Download {
   New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
   Log "チェックサム一覧を取得"
-  curl.exe -fL -o (Join-Path $WorkDir 'sha256sum.txt') "$Mirror/$Version/sha256sum.txt"
+  Invoke-Curl -fL -o (Join-Path $WorkDir 'sha256sum.txt') "$Mirror/$Version/sha256sum.txt"
   foreach ($iso in IsoNames) {
     Log "ダウンロード: $iso（中断しても続きから再開します）"
-    curl.exe -fL -C - -o (Join-Path $WorkDir $iso) "$Mirror/$Version/$iso"
+    Invoke-Curl -fL -C - -o (Join-Path $WorkDir $iso) "$Mirror/$Version/$iso"
   }
 }
 
 function Step-Verify {
   $sums = Get-Content (Join-Path $WorkDir 'sha256sum.txt')
   foreach ($iso in IsoNames) {
-    $line = $sums | Where-Object { $_ -match [regex]::Escape($iso) } | Select-Object -First 1
+    $pattern = '^([0-9a-fA-F]{64})\s+\*?' + [regex]::Escape($iso) + '$'
+    $lines = @($sums | Where-Object { $_ -match $pattern })
+    if ($lines.Count -ne 1) { throw "チェックサムは ISO ごとに1行必要です: $iso" }
+    $line = $lines[0]
     if (-not $line) { throw "sha256sum.txt に $iso がありません" }
     $expected = ($line -split '\s+')[0].ToLower()
     Log "SHA256 を確認: $iso"
@@ -57,7 +66,7 @@ function Get-Ventoy {
   $asset = $rel.assets | Where-Object { $_.name -like 'ventoy-*-windows.zip' } | Select-Object -First 1
   New-Item -ItemType Directory -Force -Path $dir | Out-Null
   $zip = Join-Path $dir $asset.name
-  curl.exe -fL -o $zip $asset.browser_download_url
+  Invoke-Curl -fL -o $zip $asset.browser_download_url
   Expand-Archive -Force $zip $dir
   (Get-ChildItem $dir -Recurse -Filter Ventoy2Disk.exe | Select-Object -First 1).FullName
 }
@@ -65,6 +74,8 @@ function Get-Ventoy {
 function Step-Usb {
   $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
   if (-not $admin) { throw "USB への書き込みは管理者の PowerShell で実行してください" }
+
+  Step-Verify  # usb 単独実行でも、消去前に ISO を検証する
 
   $disks = Get-Disk | Where-Object BusType -eq 'USB'
   if (-not $disks) { throw "USB メモリが見つかりません" }
@@ -81,12 +92,13 @@ function Step-Usb {
   Log "Ventoy を USB に入れる（GPT）"
   $vdir = Split-Path $vexe
   Remove-Item (Join-Path $vdir 'cli_done.txt') -ErrorAction SilentlyContinue
-  Start-Process -FilePath $vexe -ArgumentList "VTOYCLI /I /PhyDrive:$num /GPT /NOUSBCheck" -WorkingDirectory $vdir -Wait
+  Start-Process -FilePath $vexe -ArgumentList "VTOYCLI /I /PhyDrive:$num /GPT" -WorkingDirectory $vdir -Wait
   $result = Get-Content (Join-Path $vdir 'cli_done.txt') -ErrorAction SilentlyContinue
   if ($result -ne '0') { throw "Ventoy の書き込みに失敗しました（$vdir\cli_log.txt を確認）" }
 
   Start-Sleep 5
-  $vol = Get-Volume | Where-Object FileSystemLabel -eq 'Ventoy' | Select-Object -First 1
+  $vol = Get-Partition -DiskNumber ([int]$num) | Get-Volume |
+    Where-Object FileSystemLabel -eq 'Ventoy' | Select-Object -First 1
   if (-not $vol.DriveLetter) { throw "Ventoy ドライブが見つかりません。USB を挿し直して ISO を手でコピーしてください" }
   foreach ($iso in IsoNames) {
     Log "コピー: $iso → $($vol.DriveLetter):\"
@@ -99,5 +111,5 @@ switch ($Step) {
   'download' { Step-Download }
   'verify'   { Step-Verify }
   'usb'      { Step-Usb }
-  'all'      { Step-Download; Step-Verify; Step-Usb }
+  'all'      { Step-Download; Step-Usb }
 }

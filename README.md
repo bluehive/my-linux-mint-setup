@@ -13,9 +13,9 @@ bash setup.sh wsl2   # WSL2（GUI アプリは入れない）
 
 1. 基本ツール（git、curl、build-essential など）
 2. `config/packages.list` があれば、apt パッケージを復元
-3. 日本語環境（ibus-mozc、Noto CJK フォント）
-4. デスクトップアプリ（Firefox、LibreOffice、Okular、Calibre、Thunderbird、Microsoft Edge）
-5. Racket / DrRacket
+3. Mint のみ：日本語環境（IBus / Mozc、Noto CJK フォント）
+4. Mint のみ：デスクトップアプリ（Firefox、LibreOffice、Okular、Calibre、Thunderbird、Microsoft Edge）
+5. Racket（Mint では DrRacket も含む）
 6. Emacs 設定のクローンと配置
 7. mise（ランタイム管理）
 8. `config/repos.txt` があれば、`~/my-project` へリポジトリをクローン
@@ -45,7 +45,7 @@ bash setup-xfce.sh
 
 ## Windows 11 でインストール USB を作る（windows/）
 
-Linux Mint 安定版（22.3）の MATE 版と Xfce 版の ISO をダウンロードし、SHA256 を確認してから、[Ventoy](https://www.ventoy.net/) で1本の USB メモリに両方入れます。起動時のメニューでどちらかを選べます。
+Linux Mint 22.3（このスクリプトの既定バージョン）の MATE 版と Xfce 版の ISO をダウンロードし、SHA256 を確認してから、[Ventoy](https://www.ventoy.net/) で1本の USB メモリに両方入れます。起動時のメニューでどちらかを選べます。
 
 準備（初回のみ、PowerShell で）:
 
@@ -83,3 +83,12 @@ mkdir ~\mint-usb -Force | Out-Null; cd ~\mint-usb; curl.exe -fLO https://raw.git
 
 - `config/` フォルダ（`packages.list`、`mise.toml`、`repos.txt`）は、このリポジトリに含めていません。必要なら自分で用意してください。無ければ、その手順は飛ばされます。
 - `sudo` を使います。中身を確認してから実行してください。
+
+## 確認と制約
+
+- 一般ユーザーで実行してください。`setup.sh wsl2` ではデスクトップ用パッケージを省き、Emacs は `emacs-nox` を使います。ただし、自分で用意した `config/packages.list` や mise 設定の内容はそのまま復元します。
+- IBus / Mozc は、再ログイン後に IBus の設定で「日本語 (Mozc)」を選んでください。
+- 非公開の Emacs 設定を取得するには、GitHub CLI の認証または GitHub に登録した SSH 鍵が必要です。取得失敗は警告として表示します。
+- `usb-write` / `-Step usb` でも、USB 消去前に ISO の SHA256 を再確認します。ISO は選択したディスクの Ventoy ボリュームにだけコピーします。
+- チェックサムは ISO と同じミラーから取得します。破損検知のための確認であり、署名による真正性の検証は行いません。[Mint 公式の検証手順](https://linuxmint-installation-guide.readthedocs.io/en/latest/verify.html)も参照してください。
+- 検証: `python3 -m unittest discover -s tests -v`（モックによる Linux 分岐の確認）。Windows / Mint / WSL2 実機でのインストールと USB 書き込みは別途確認が必要です。

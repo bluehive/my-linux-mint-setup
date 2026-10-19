@@ -2,13 +2,17 @@
 # ============================================================
 # 環境構築スクリプト (新PCで restore.sh の後に実行)
 # apt / mise / git クローンで開発環境を再構築する
-# 使い方: bash setup.sh [--target mint|wsl2]
+# 使い方: bash setup.sh [mint|wsl2]
 # ============================================================
 set -euo pipefail
 
 TARGET="${1:-mint}"   # mint | wsl2
 [ "$TARGET" != "mint" ] && [ "$TARGET" != "wsl2" ] && { echo "target は mint か wsl2"; exit 1; }
 log() { echo "[setup] $*"; }
+if [ "$(id -u)" -eq 0 ]; then
+  echo "root ではなく一般ユーザーで実行してください（必要な所で sudo を使います）。" >&2
+  exit 1
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$SCRIPT_DIR/config"
@@ -32,41 +36,42 @@ fi
 # ============================================================
 # 2. 日本語環境
 # ============================================================
-log "== 2. 日本語環境 =="
-sudo apt-get install -y ibus ibus-mozc fonts-noto-cjk mozc-utils-gui
-# 入力メソッドを Mozc に設定
 if [ "$TARGET" = "mint" ]; then
-  im-config -n mozc 2>/dev/null || true
+  log "== 2. 日本語環境 =="
+  sudo apt-get install -y ibus ibus-mozc fonts-noto-cjk mozc-utils-gui im-config
+  # IBus を起動し、その設定画面で Mozc を選ぶ
+  im-config -n ibus
+  log "  再ログイン後、IBus の設定で日本語 (Mozc) を選択してください"
 fi
-log "  再ログイン後、Mozc が入力メソッドとして利用可能になります"
 
 # ============================================================
 # 3. ブラウザー / LibreOffice / ビュワー / メーラー
 # ============================================================
-log "== 3. デスクトップアプリ =="
-# Firefox (apt) / LibreOffice / PDF / EPUB / Thunderbird
-sudo apt-get install -y firefox firefox-locale-ja libreoffice libreoffice-l10n-ja \
-                        hunspell-ja okular evince calibre thunderbird thunderbird-locale-ja || true
+if [ "$TARGET" = "mint" ]; then
+  log "== 3. デスクトップアプリ =="
+  # Firefox (apt) / LibreOffice / PDF / EPUB / Thunderbird
+  sudo apt-get install -y firefox firefox-locale-ja libreoffice libreoffice-l10n-ja \
+                          okular evince calibre thunderbird thunderbird-locale-ja
 
-# Microsoft Edge (公式リポジトリ)
-if [ "$TARGET" = "mint" ] && ! command -v microsoft-edge >/dev/null 2>&1; then
-  log "  Microsoft Edge を導入"
-  curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft.gpg
-  echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" \
-    | sudo tee /etc/apt/sources.list.d/microsoft-edge.list >/dev/null
-  sudo apt-get update -y
-  sudo apt-get install -y microsoft-edge-stable || true
+  # Microsoft Edge (公式リポジトリ)
+  if ! command -v microsoft-edge >/dev/null 2>&1; then
+    log "  Microsoft Edge を導入"
+    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/microsoft.gpg
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" \
+      | sudo tee /etc/apt/sources.list.d/microsoft-edge.list >/dev/null
+    sudo apt-get update -y
+    sudo apt-get install -y microsoft-edge-stable
+  fi
 fi
 
 # ============================================================
-# 4. DrRacket / Racket
+# 4. Racket (Mint では DrRacket も含む)
 # ============================================================
 log "== 4. Racket / DrRacket =="
-sudo apt-get install -y racket || true
-# mise で racket を管理している場合の整合
-if command -v mise >/dev/null 2>&1 && [ -f "$CONFIG_DIR/mise.toml" ]; then
-  log "  mise から racket を導入"
-  mise install 2>/dev/null || true
+if [ "$TARGET" = "mint" ]; then
+  sudo apt-get install -y racket
+else
+  sudo apt-get install -y --no-install-recommends racket
 fi
 
 # ============================================================
@@ -74,7 +79,11 @@ fi
 # ============================================================
 log "== 5. Emacs 設定 =="
 # 前提: GitHub SSH 鍵が登録済みであること (private リポジトリ取得のため)
-sudo apt-get install -y emacs || true
+if [ "$TARGET" = "mint" ]; then
+  sudo apt-get install -y emacs
+else
+  sudo apt-get install -y emacs-nox
+fi
 if [ ! -d "$HOME/.emacs.d" ]; then
   log "  minimal-emacs.d をクローン"
   gh repo clone bluehive/minimal-emacs.d "$HOME/.emacs.d" 2>/dev/null || \
@@ -100,14 +109,19 @@ fi
 # 6. mise (ランタイム管理)
 # ============================================================
 log "== 6. mise =="
+export PATH="$HOME/.local/bin:$PATH"
 if ! command -v mise >/dev/null 2>&1; then
-  curl https://mise.run | sh
-  echo 'eval "$(~/.local/bin/mise activate bash)"' >> "$HOME/.bashrc"
+  installer="$(mktemp)"
+  curl -fsSL https://mise.run -o "$installer"
+  sh "$installer"
+  rm -f "$installer"
 fi
+activation='eval "$(~/.local/bin/mise activate bash)"'
+grep -qxF "$activation" "$HOME/.bashrc" 2>/dev/null || printf '%s\n' "$activation" >> "$HOME/.bashrc"
 if [ -f "$CONFIG_DIR/mise.toml" ]; then
   mkdir -p "$HOME/.config/mise"
   cp "$CONFIG_DIR/mise.toml" "$HOME/.config/mise/config.toml"
-  mise install 2>/dev/null || true
+  (cd "$HOME" && mise install)
 fi
 
 # ============================================================
