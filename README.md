@@ -43,6 +43,46 @@ bash setup-xfce.sh
 
 日本語環境（ja_JP.UTF-8 ロケール、Noto CJK と IPA フォント、IBus と Mozc）、ブラウザ2つ（Firefox と Google Chrome）、LibreOffice（日本語化）を入れます。終わったら一度ログアウトしてください。
 
+## タイル型 i3 版（setup-tiling.sh）
+
+MATE / Xfce などの既存デスクトップはそのままに、タイル型ウィンドウマネージャ [i3](https://i3wm.org/) を追加します。**既定のセッションは変えません。**
+
+入れるもの: `i3`（`i3-wm`）、`i3status`、`i3lock`、`suckless-tools`（dmenu を含む）、`alacritty`（無ければ `xterm`）、`feh`、`rofi`、日本語環境（Xfce 版と同じ ja_JP.UTF-8 ロケール、Noto CJK と IPA フォント、IBus と Mozc）。
+
+`/etc/i3/config` を `~/.config/i3/config` にコピーし（既にあれば上書きしません）、Mod+Enter を alacritty に設定、末尾に `exec --no-startup-id ibus-daemon -drx` を追加します（目印のコメントで二重追加を防止）。
+
+### wget で取ってきて実行する
+
+```sh
+cd ~
+wget -O setup-tiling.sh https://raw.githubusercontent.com/bluehive/my-linux-mint-setup/main/setup-tiling.sh
+less setup-tiling.sh      # 中身を確認（q で閉じる）
+bash setup-tiling.sh
+```
+
+途中で sudo のパスワードを聞かれます。
+
+### i3 でログインする
+
+1. 一度ログアウトします。
+2. ログイン画面（LightDM）で、ユーザー名の横または画面右上のセッションアイコンをクリックし、「i3」を選んでからパスワードを入れます。
+3. 主なキー（Mod は既定で Alt キー）:
+
+| キー | 動作 |
+| --- | --- |
+| Mod+Enter | 端末（alacritty） |
+| Mod+d | dmenu（アプリ起動） |
+| Mod+Shift+d | rofi（アプリ一覧） |
+| Mod+Shift+q | ウィンドウを閉じる |
+| Mod+1〜0 | ワークスペース切り替え |
+| Mod+Shift+e | i3 を終了（ログアウト） |
+
+日本語入力は Ctrl+Space（または 半角/全角）で切り替えます。
+
+### 元に戻す
+
+ログアウトし、ログイン画面のセッション選択で MATE や Xfce を選び直してください。LightDM は前回選んだセッションを覚えます。i3 自体を消す場合は `sudo apt-get remove i3 i3-wm` を実行します。
+
 ## Windows 11 でインストール USB を作る（windows/）
 
 Linux Mint 22.3（このスクリプトの既定バージョン）の MATE 版と Xfce 版の ISO をダウンロードし、SHA256 を確認してから、[Ventoy](https://www.ventoy.net/) で1本の USB メモリに両方入れます。起動時のメニューでどちらかを選べます。
